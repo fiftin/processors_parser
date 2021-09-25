@@ -1,3 +1,5 @@
 .idea/
 _trial_temp/
 __pycache__/
+.scrapy/
+/result.db

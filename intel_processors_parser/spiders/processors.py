@@ -14,19 +14,19 @@ class ProcessorsSpider(scrapy.Spider):
     ]
 
     field_labels = {
-        '': '',
+        '# of Cores': 'cores',
+        '# of Threads': 'threads',
     }
 
     field_types = {
         'cores': 'INT',
         'threads': 'INT',
-        '': '',
     }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        conn = sqlite3.connect('../../result.db')
+        conn = sqlite3.connect('result.db', isolation_level=None)
         c = conn.cursor()
 
         table_columns = ''
@@ -41,8 +41,9 @@ class ProcessorsSpider(scrapy.Spider):
         if len(response.body) == 0:
             return
 
-        for processor_link in response.css('.table-responsive > tbody > tr > td:nth-child(2) > a'):
-            yield response.follow(processor_link, self.parse_processor)
+        processor_links = response.css('.table-responsive tbody > tr > td:nth-child(2) > a')
+        for link in processor_links:
+            yield response.follow(link, self.parse_processor)
 
     @staticmethod
     def parse_value(value, value_type):
@@ -58,12 +59,21 @@ class ProcessorsSpider(scrapy.Spider):
         fields = {}
 
         for field_row in response.css('.tech-section-row'):
-            label = field_row.css('.tech-label > span')
-            value = field_row.css('.tech-data > *::text')
-            field_name = self.field_labels[label]
+            label = field_row.css('.tech-label > span::text').get()
+            value = field_row.css('.tech-data > *::text').get()
+            field_name = self.field_labels.get(label, None)
+            if field_name is None:
+                continue
             fields[field_name] = self.parse_value(value, self.field_types[field_name])
 
+        if len(fields) == 0:
+            return
+
         c = self.conn.cursor()
-        query = 'INSERT INTO ' + ', '.join(fields.keys()) + \
-                ' VALUES (' + ', '.join(['?' for _ in range(len(fields))]) + ')'
-        c.execute(query, fields.values())
+        query = 'INSERT INTO processors(' + \
+                ', '.join(fields.keys()) + \
+                ') VALUES (' + \
+                ', '.join(['?' for _ in range(len(fields))]) + \
+                ')'
+        args = list(fields.values())
+        c.execute(query, args)
