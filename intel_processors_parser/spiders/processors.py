@@ -1,3 +1,5 @@
+import re
+
 import scrapy
 import sqlite3
 
@@ -31,42 +33,42 @@ class ProcessorsSpider(scrapy.Spider):
     ]
 
     field_labels = {
-        '# of Cores':       'cores',
-        '# of Threads':     'threads',
+        '# of Cores': 'cores',
+        '# of Threads': 'threads',
         'Processor Number': 'model',
-        'Launch Date':      'launch_date',
-        'Lithography':      'lithography',
+        'Launch Date': 'launch_date',
+        'Lithography': 'lithography',
         'Processor Base Frequency': 'base_frequency',
         'Configurable TDP-up Frequency': 'base_frequency',
         'Max Turbo Frequency': 'turbo_frequency',
-        'Cache':            'cache_size',
-        'TDP':              'tdp',
+        'Cache': 'cache_size',
+        'TDP': 'tdp',
         'Configurable TDP-up': 'tdp',
         'Recommended Customer Price': 'price',
-        'Product Collection':   'collection',
+        'Product Collection': 'collection',
         'Sockets Supported': 'socket',
-        'Memory Types':     'memory_type',
+        'Memory Types': 'memory_type',
         'Vertical Segment': 'vertical_segment',
         'Max Memory Size (dependent on memory type)': 'max_memory_size'
     }
 
     field_types = {
-        'cores':        'INT',
-        'threads':      'INT',
-        'model':        'TEXT',
-        'launch_date':  'TEXT',
-        'lithography':  'INT',
+        'cores': 'INT',
+        'threads': 'INT',
+        'model': 'TEXT',
+        'launch_date': 'TEXT',
+        'lithography': 'INT',
         'base_frequency': 'NUMERIC',
         'turbo_frequency': 'NUMERIC',
-        'cache_size':   'INT',
-        'tdp':          'INT',
-        'price':        'NUMERIC',
-        'collection':   'TEXT',
-        'socket':       'TEXT',
-        'memory_type':  'TEXT',
-        'url':          'TEXT',
+        'cache_size': 'NUMERIC',
+        'tdp': 'NUMERIC',
+        'price': 'NUMERIC',
+        'collection': 'TEXT',
+        'socket': 'TEXT',
+        'memory_type': 'TEXT',
+        'url': 'TEXT',
         'vertical_segment': 'TEXT',
-        'max_memory_size': 'INT',
+        'max_memory_size': 'NUMERIC',
     }
 
     def __init__(self, **kwargs):
@@ -93,6 +95,21 @@ class ProcessorsSpider(scrapy.Spider):
         for link in processor_links:
             yield response.follow(link, self.parse_processor)
 
+    @staticmethod
+    def parse_bytes(value):
+        m = re.search(r'([\d.]+)\s*(B|KB|MB|GB|TB)', value)
+        if m is None:
+            return None
+        rank = 1
+        if m[2] == 'KB':
+            rank = 1000
+        elif m[2] == 'MB':
+            rank = 1000_0000
+        elif m[2] == 'GB':
+            rank = 1000_000_000
+        elif m[2] == 'TB':
+            rank = 1000_000_000_000
+        return round(float(m[1]) * rank)
 
     @staticmethod
     def parse_value(value, value_type):
@@ -100,6 +117,9 @@ class ProcessorsSpider(scrapy.Spider):
         if value_type == 'TEXT':
             return value
         if value_type == 'INT':
+            b = ProcessorsSpider.parse_bytes(value)
+            if b is not None:
+                return b
             return int(value.split(' ')[0])
         if value_type == 'REAL':
             return float(value.split(' ')[0])
@@ -118,8 +138,13 @@ class ProcessorsSpider(scrapy.Spider):
             field_name = self.field_labels.get(label, None)
             if field_name is None:
                 continue
-            fields[field_name] = self.parse_value(value, self.field_types[field_name])
-
+            try:
+                fields[field_name] = self.parse_value(value, self.field_types[field_name])
+            except BaseException:
+                print('Error on page ' + response.request.url +
+                      ' during parsing field ' + field_name +
+                      ' with value ' + value)
+                raise
         if len(fields) == 0:
             return
 
