@@ -11,6 +11,23 @@ class ProcessorsSpider(scrapy.Spider):
         'https://www.intel.com/content/www/us/en/products/details/processors/core/i7/products.html',
         'https://www.intel.com/content/www/us/en/products/details/processors/core/i9/products.html',
         'https://www.intel.com/content/www/us/en/products/details/processors/core/x/products.html',
+
+        'https://www.intel.com/content/www/us/en/products/details/processors/celeron/products.html',
+
+        'https://www.intel.com/content/www/us/en/products/details/processors/pentium/gold/products.html',
+        'https://www.intel.com/content/www/us/en/products/details/processors/pentium/silver/products.html',
+
+        'https://www.intel.com/content/www/us/en/products/details/processors/atom/c/products.html',
+        'https://www.intel.com/content/www/us/en/products/details/processors/atom/p/products.html',
+
+        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/scalable/platinum/products.html',
+        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/scalable/gold/products.html',
+        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/scalable/silver/products.html',
+        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/scalable/bronze/products.html',
+
+        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/e/products.html',
+        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/w/products.html',
+        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/d/products.html',
     ]
 
     field_labels = {
@@ -29,6 +46,8 @@ class ProcessorsSpider(scrapy.Spider):
         'Product Collection':   'collection',
         'Sockets Supported': 'socket',
         'Memory Types':     'memory_type',
+        'Vertical Segment': 'vertical_segment',
+        'Max Memory Size (dependent on memory type)': 'max_memory_size'
     }
 
     field_types = {
@@ -46,6 +65,8 @@ class ProcessorsSpider(scrapy.Spider):
         'socket':       'TEXT',
         'memory_type':  'TEXT',
         'url':          'TEXT',
+        'vertical_segment': 'TEXT',
+        'max_memory_size': 'INT',
     }
 
     def __init__(self, **kwargs):
