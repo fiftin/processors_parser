@@ -14,13 +14,38 @@ class ProcessorsSpider(scrapy.Spider):
     ]
 
     field_labels = {
-        '# of Cores': 'cores',
-        '# of Threads': 'threads',
+        '# of Cores':       'cores',
+        '# of Threads':     'threads',
+        'Processor Number': 'model',
+        'Launch Date':      'launch_date',
+        'Lithography':      'lithography',
+        'Processor Base Frequency': 'base_frequency',
+        'Configurable TDP-up Frequency': 'base_frequency',
+        'Max Turbo Frequency': 'turbo_frequency',
+        'Cache':            'cache_size',
+        'TDP':              'tdp',
+        'Configurable TDP-up': 'tdp',
+        'Recommended Customer Price': 'price',
+        'Product Collection':   'collection',
+        'Sockets Supported': 'socket',
+        'Memory Types':     'memory_type',
     }
 
     field_types = {
-        'cores': 'INT',
-        'threads': 'INT',
+        'cores':        'INT',
+        'threads':      'INT',
+        'model':        'TEXT',
+        'launch_date':  'TEXT',
+        'lithography':  'INT',
+        'base_frequency': 'NUMERIC',
+        'turbo_frequency': 'NUMERIC',
+        'cache_size':   'INT',
+        'tdp':          'INT',
+        'price':        'NUMERIC',
+        'collection':   'TEXT',
+        'socket':       'TEXT',
+        'memory_type':  'TEXT',
+        'url':          'TEXT',
     }
 
     def __init__(self, **kwargs):
@@ -33,7 +58,9 @@ class ProcessorsSpider(scrapy.Spider):
         for field_name, field_type in self.field_types.items():
             table_columns += ', ' + field_name + ' ' + field_type
 
-        c.execute("CREATE TABLE processors(id INTEGER PRIMARY KEY" + table_columns + ')')
+        c.execute("CREATE TABLE processors("
+                  "id INTEGER PRIMARY KEY" +
+                  table_columns + ')')
 
         self.conn = conn
 
@@ -45,18 +72,26 @@ class ProcessorsSpider(scrapy.Spider):
         for link in processor_links:
             yield response.follow(link, self.parse_processor)
 
+
     @staticmethod
     def parse_value(value, value_type):
+        value = value.strip()
         if value_type == 'TEXT':
             return value
         if value_type == 'INT':
             return int(value.split(' ')[0])
         if value_type == 'REAL':
             return float(value.split(' ')[0])
+        if value_type == 'NUMERIC':
+            if value.startswith('$'):
+                value = value[1:]
+            return float(value.split(' ')[0])
         raise Exception('invalid value type')
 
     def parse_processor(self, response):
-        fields = {}
+        fields = {
+            'url': response.request.url,
+        }
 
         for field_row in response.css('.tech-section-row'):
             label = field_row.css('.tech-label > span::text').get()
