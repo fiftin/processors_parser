@@ -89,9 +89,7 @@ class ProcessorsSpider(scrapy.Spider):
         raise Exception('invalid value type')
 
     def parse_processor(self, response):
-        fields = {
-            'url': response.request.url,
-        }
+        fields = {}
 
         for field_row in response.css('.tech-section-row'):
             label = field_row.css('.tech-label > span::text').get()
@@ -103,6 +101,8 @@ class ProcessorsSpider(scrapy.Spider):
 
         if len(fields) == 0:
             return
+
+        fields['url'] = response.request.url
 
         c = self.conn.cursor()
         query = 'INSERT INTO processors(' + \
