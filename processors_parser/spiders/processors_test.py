@@ -1,5 +1,5 @@
 import unittest
-from intel_processors_parser.spiders.processors import ProcessorsSpider
+from processors_parser.spiders.intel_processors import ProcessorsSpider
 
 
 class TestProcessorsSpider(unittest.TestCase):

@@ -1,4 +1,5 @@
 import scrapy
+import sqlite3
 
 
 class AmdProcessorsSpider(scrapy.Spider):
@@ -7,6 +8,7 @@ class AmdProcessorsSpider(scrapy.Spider):
     start_urls = [
         'https://www.amd.com/en/products/specifications/processors'
     ]
+
     field_labels = {
         '# of Cores': 'cores',
         '# of Threads': 'threads',
@@ -46,6 +48,22 @@ class AmdProcessorsSpider(scrapy.Spider):
         'max_memory_size': 'NUMERIC',
     }
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        conn = sqlite3.connect('result.db', isolation_level=None)
+        c = conn.cursor()
+
+        table_columns = ''
+        for field_name, field_type in self.field_types.items():
+            table_columns += ', ' + field_name + ' ' + field_type
+
+        c.execute("CREATE TABLE amd_processors("
+                  "id INTEGER PRIMARY KEY" +
+                  table_columns + ')')
+
+        self.conn = conn
+
     def parse(self, response):
         if len(response.body) == 0:
             return
@@ -54,3 +72,4 @@ class AmdProcessorsSpider(scrapy.Spider):
             yield response.follow(link, self.parse_processor)
 
     def parse_processor(self):
+        pass

@@ -5,7 +5,7 @@ import sqlite3
 
 
 class ProcessorsSpider(scrapy.Spider):
-    name = 'processors'
+    name = 'intel_processors'
     allowed_domains = ['intel.com']
     start_urls = [
         'https://www.intel.com/content/www/us/en/products/details/processors/core/i3/products.html',
@@ -81,7 +81,7 @@ class ProcessorsSpider(scrapy.Spider):
         for field_name, field_type in self.field_types.items():
             table_columns += ', ' + field_name + ' ' + field_type
 
-        c.execute("CREATE TABLE processors("
+        c.execute("CREATE TABLE intel_processors("
                   "id INTEGER PRIMARY KEY" +
                   table_columns + ')')
 
