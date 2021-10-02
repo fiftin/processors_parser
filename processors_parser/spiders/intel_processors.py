@@ -1,7 +1,6 @@
-import re
 import scrapy
 import sqlite3
-from processors_parser.spiders.helpers import parse_value, parse_page
+from processors_parser.spiders.helpers import parse_page
 
 
 class ProcessorsSpider(scrapy.Spider):
@@ -81,6 +80,8 @@ class ProcessorsSpider(scrapy.Spider):
         table_columns = ''
         for field_name, field_type in self.field_types.items():
             table_columns += ', ' + field_name + ' ' + field_type
+
+        c.execute('DROP TABLE IF EXISTS intel_processors')
 
         c.execute("CREATE TABLE intel_processors("
                   "id INTEGER PRIMARY KEY" +

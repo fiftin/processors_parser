@@ -1,7 +1,7 @@
 import scrapy
 import sqlite3
 import re
-from processors_parser.spiders.helpers import parse_value, parse_page
+from processors_parser.spiders.helpers import parse_page
 
 
 class AmdProcessorsSpider(scrapy.Spider):
@@ -44,13 +44,11 @@ class AmdProcessorsSpider(scrapy.Spider):
         'cache_l2': 'NUMERIC',
         'cache_l3': 'NUMERIC',
         'tdp': 'NUMERIC',
-        #'price': 'NUMERIC',
         'product_line': 'TEXT',
         'socket': 'TEXT',
         'memory_type': 'TEXT',
         'url': 'TEXT',
         'vertical_segment': 'TEXT',
-        #'max_memory_size': 'NUMERIC',
         'max_temp': 'NUMERIC',
         'max_memory_speed': 'INT',
     }
@@ -64,6 +62,8 @@ class AmdProcessorsSpider(scrapy.Spider):
         table_columns = ''
         for field_name, field_type in self.field_types.items():
             table_columns += ', ' + field_name + ' ' + field_type
+
+        c.execute('DROP TABLE IF EXISTS amd_processors')
 
         c.execute("CREATE TABLE amd_processors("
                   "id INTEGER PRIMARY KEY" +
