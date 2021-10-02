@@ -1,5 +1,6 @@
 import scrapy
 import sqlite3
+from processors_parser.spiders.helpers import parse_value, parse_page
 
 
 class AmdProcessorsSpider(scrapy.Spider):
@@ -10,23 +11,19 @@ class AmdProcessorsSpider(scrapy.Spider):
     ]
 
     field_labels = {
-        '# of Cores': 'cores',
+        '# of CPU Cores': 'cores',
         '# of Threads': 'threads',
-        'Processor Number': 'model',
         'Launch Date': 'launch_date',
-        'Lithography': 'lithography',
-        'Processor Base Frequency': 'base_frequency',
-        'Configurable TDP-up Frequency': 'base_frequency',
+        'Processor Technology for CPU Cores': 'lithography',
+        'Max. Boost Clock': 'base_frequency',
+        'Base Clock': 'base_frequency',
         'Max Turbo Frequency': 'turbo_frequency',
         'Cache': 'cache_size',
-        'TDP': 'tdp',
-        'Configurable TDP-up': 'tdp',
-        'Recommended Customer Price': 'price',
-        'Product Collection': 'collection',
-        'Sockets Supported': 'socket',
-        'Memory Types': 'memory_type',
-        'Vertical Segment': 'vertical_segment',
-        'Max Memory Size (dependent on memory type)': 'max_memory_size'
+        'Default TDP': 'tdp',
+        'Product Line': 'product_line',
+        'CPU Socket': 'socket',
+        'System Memory Type': 'memory_type',
+        'Platform': 'vertical_segment',
     }
 
     field_types = {
@@ -64,12 +61,30 @@ class AmdProcessorsSpider(scrapy.Spider):
 
         self.conn = conn
 
-    def parse(self, response):
+    def parse(self, response, **kwargs):
         if len(response.body) == 0:
             return
         processor_links = response.css('#spec-table > tbody > tr')
         for link in processor_links:
             yield response.follow(link, self.parse_processor)
 
-    def parse_processor(self):
-        pass
+    def parse_processor(self, response):
+        fields = parse_page(
+            response.css('.fieldset-wrapper > .field'),
+            '.field__label::text',
+            '.field__item::text',
+            self.field_labels,
+            self.field_types,
+            response.request.url)
+
+        if fields is None:
+            return
+
+        c = self.conn.cursor()
+        query = 'INSERT INTO amd_processors(' + \
+                ', '.join(fields.keys()) + \
+                ') VALUES (' + \
+                ', '.join(['?' for _ in range(len(fields))]) + \
+                ')'
+        args = list(fields.values())
+        c.execute(query, args)

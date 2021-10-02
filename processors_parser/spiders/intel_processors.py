@@ -1,7 +1,7 @@
 import re
-
 import scrapy
 import sqlite3
+from processors_parser.spiders.helpers import parse_value, parse_page
 
 
 class ProcessorsSpider(scrapy.Spider):
@@ -87,7 +87,7 @@ class ProcessorsSpider(scrapy.Spider):
 
         self.conn = conn
 
-    def parse(self, response):
+    def parse(self, response, **kwargs):
         if len(response.body) == 0:
             return
 
@@ -95,63 +95,20 @@ class ProcessorsSpider(scrapy.Spider):
         for link in processor_links:
             yield response.follow(link, self.parse_processor)
 
-    @staticmethod
-    def parse_bytes(value):
-        m = re.search(r'([\d.]+)\s*(B|KB|MB|GB|TB)', value)
-        if m is None:
-            return None
-        rank = 1
-        if m[2] == 'KB':
-            rank = 1000
-        elif m[2] == 'MB':
-            rank = 1000_0000
-        elif m[2] == 'GB':
-            rank = 1000_000_000
-        elif m[2] == 'TB':
-            rank = 1000_000_000_000
-        return round(float(m[1]) * rank)
-
-    @staticmethod
-    def parse_value(value, value_type):
-        value = value.strip()
-        if value_type == 'TEXT':
-            return value
-        if value_type == 'INT':
-            b = ProcessorsSpider.parse_bytes(value)
-            if b is not None:
-                return b
-            return int(value.split(' ')[0])
-        if value_type == 'REAL':
-            return float(value.split(' ')[0])
-        if value_type == 'NUMERIC':
-            if value.startswith('$'):
-                value = value[1:]
-            return float(value.split(' ')[0])
-        raise Exception('invalid value type')
-
     def parse_processor(self, response):
-        fields = {}
+        fields = parse_page(
+            response.css('.tech-section-row'),
+            '.tech-label > span::text',
+            '.tech-data > *::text',
+            self.field_labels,
+            self.field_types,
+            response.request.url)
 
-        for field_row in response.css('.tech-section-row'):
-            label = field_row.css('.tech-label > span::text').get()
-            value = field_row.css('.tech-data > *::text').get()
-            field_name = self.field_labels.get(label, None)
-            if field_name is None:
-                continue
-            try:
-                fields[field_name] = self.parse_value(value, self.field_types[field_name])
-            except BaseException:
-                print('Error on page ' + response.request.url +
-                      ' during parsing field ' + field_name +
-                      ' with value ' + value)
-                raise
-        if len(fields) == 0:
+        if fields is None:
             return
 
-        fields['url'] = response.request.url
-
         c = self.conn.cursor()
-        query = 'INSERT INTO processors(' + \
+        query = 'INSERT INTO intel_processors(' + \
                 ', '.join(fields.keys()) + \
                 ') VALUES (' + \
                 ', '.join(['?' for _ in range(len(fields))]) + \
