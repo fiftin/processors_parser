@@ -13,19 +13,23 @@ class AmdProcessorsSpider(scrapy.Spider):
     ]
 
     field_labels = {
-        '# of CPU Cores': 'cores',
-        '# of Threads': 'threads',
-        'Launch Date': 'launch_date',
-        'Processor Technology for CPU Cores': 'lithography',
-        'Max. Boost Clock': 'base_frequency',
-        'Base Clock': 'base_frequency',
-        'Max Turbo Frequency': 'turbo_frequency',
-        'Cache': 'cache_size',
-        'Default TDP': 'tdp',
-        'Product Line': 'product_line',
-        'CPU Socket': 'socket',
-        'System Memory Type': 'memory_type',
-        'Platform': 'vertical_segment',
+        'view-name-table-column': 'model',
+        'view-field-cpu-core-count-table-column': 'cores',
+        'view-field-thread-count-table-column': 'threads',
+        'view-field-launch-date-table-column': 'launch_date',
+        'view-field-cmos-table-column': 'lithography',
+        'view-field-cpu-clock-speed-table-column': 'base_frequency',
+        'view-field-max-cpu-clock-speed-table-column': 'turbo_frequency',
+        'view-field-total-l1-cache-table-column': 'cache_l1',
+        'view-field-total-l2-cache-table-column': 'cache_l2',
+        'view-field-total-l3-cache-table-column': 'cache_l3',
+        'view-field-default-tdp-table-column': 'tdp',
+        'view-product-type-1-table-column': 'product_line',
+        'view-field-socket-table-column': 'socket',
+        'view-product-type-6-table-column': 'memory_type',
+        'view-platform-table-column': 'vertical_segment',
+        'view-field-max-temps-table-column': 'max_temp',
+        'view-field-max-memory-speed-table-column': 'max_memory_speed',
     }
 
     field_types = {
@@ -36,15 +40,19 @@ class AmdProcessorsSpider(scrapy.Spider):
         'lithography': 'INT',
         'base_frequency': 'NUMERIC',
         'turbo_frequency': 'NUMERIC',
-        'cache_size': 'NUMERIC',
+        'cache_l1': 'NUMERIC',
+        'cache_l2': 'NUMERIC',
+        'cache_l3': 'NUMERIC',
         'tdp': 'NUMERIC',
-        'price': 'NUMERIC',
+        #'price': 'NUMERIC',
         'product_line': 'TEXT',
         'socket': 'TEXT',
         'memory_type': 'TEXT',
         'url': 'TEXT',
         'vertical_segment': 'TEXT',
-        'max_memory_size': 'NUMERIC',
+        #'max_memory_size': 'NUMERIC',
+        'max_temp': 'NUMERIC',
+        'max_memory_speed': 'INT',
     }
 
     def __init__(self, **kwargs):
@@ -67,24 +75,19 @@ class AmdProcessorsSpider(scrapy.Spider):
         if len(response.body) == 0:
             return
 
-        processor_links = \
-            list(map(lambda x: '/en/product/' + re.search(r'entity-(\d+)', x.attrib['class'])[1],
-                response.css('#spec-table > tbody > tr > td:nth-child(2)')))
+        processor_rows = response.css('#spec-table > tbody > tr')
 
-        for link in processor_links:
-            yield response.follow(link, self.parse_processor)
+        for row in processor_rows:
+            self.parse_processor(row)
 
-    def parse_processor(self, response):
+    def parse_processor(self, row):
         fields = parse_page(
-            response.css('.fieldset-wrapper > .field'),
-            '.field__label::text',
-            '.field__item::text',
+            row.css('td'),
+            lambda x: x.attrib.get('headers', None),
+            lambda x: x.css('::text').get(),
             self.field_labels,
             self.field_types,
-            response.request.url)
-
-        if fields is None:
-            return
+            'https://www.amd.com/en/product/' + re.search(r'entity-(\d+)', row.css('td:nth-child(2)').attrib['class'])[1])
 
         c = self.conn.cursor()
         query = 'INSERT INTO amd_processors(' + \

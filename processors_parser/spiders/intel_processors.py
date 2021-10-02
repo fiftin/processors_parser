@@ -99,8 +99,8 @@ class ProcessorsSpider(scrapy.Spider):
     def parse_processor(self, response):
         fields = parse_page(
             response.css('.tech-section-row'),
-            '.tech-label > span::text',
-            '.tech-data > *::text',
+            lambda x: x.css('.tech-label > span::text').get(),
+            lambda x: x.css('.tech-data > *::text').get(),
             self.field_labels,
             self.field_types,
             response.request.url)

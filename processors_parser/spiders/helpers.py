@@ -5,11 +5,16 @@ def parse_page(rows, label_selector, value_selector, field_labels, field_types, 
     fields = {}
 
     for field_row in rows:
-        label = field_row.css(label_selector).get()
-        value = field_row.css(value_selector).get()
+        label = label_selector(field_row)
+        value = value_selector(field_row)
         field_name = field_labels.get(label, None)
+
         if field_name is None:
             continue
+
+        if value is None:
+            continue
+
         try:
             fields[field_name] = parse_value(value, field_types[field_name])
         except BaseException:
