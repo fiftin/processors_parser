@@ -1,6 +1,10 @@
 import re
 
 
+def prepare_brand(value):
+    return value.replace('™', '')
+
+
 def parse_page(rows, label_selector, value_selector, field_labels, field_types, url):
     fields = {}
 
@@ -64,7 +68,7 @@ def extract_number_with_tail(value):
 def parse_value(value, value_type):
     value = value.strip()
     if value_type == 'TEXT':
-        return value
+        return prepare_brand(value)
     if value_type == 'INT':
         num = extract_number_with_tail(value)
         b = parse_bytes(num)

@@ -1,9 +1,14 @@
 import unittest
 from processors_parser.spiders.helpers import parse_value, \
-    parse_bytes, extract_number, extract_number_with_tail
+    parse_bytes, extract_number, extract_number_with_tail, \
+    prepare_brand
 
 
 class TestProcessorsSpider(unittest.TestCase):
+    def test_prepare_brand(self):
+        res = prepare_brand('AMD Ryzen™ 9 Mobile Processors with Radeon™ Graphics')
+        self.assertEqual(res, 'AMD Ryzen 9 Mobile Processors with Radeon Graphics')
+
     def test_extract_number(self):
         res = extract_number('up to 10w')
         self.assertEqual(res, '10')
