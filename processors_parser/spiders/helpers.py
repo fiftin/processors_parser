@@ -42,19 +42,32 @@ def parse_bytes(value):
     return round(float(m[1]) * rank)
 
 
+def extract_number(value):
+    m = re.search(r'([\d.]+)', value)
+    if m is None:
+        return None
+    return m[1]
+
+
+def extract_number_with_tail(value):
+    m = re.search(r'(\$?\d.*)$', value)
+    if m is None:
+        return None
+    return m[1]
+
+
 def parse_value(value, value_type):
     value = value.strip()
     if value_type == 'TEXT':
         return value
     if value_type == 'INT':
-        b = parse_bytes(value)
+        num = extract_number_with_tail(value)
+        b = parse_bytes(num)
         if b is not None:
             return b
-        return int(value.split(' ')[0])
+        return int(extract_number(num))
     if value_type == 'REAL':
-        return float(value.split(' ')[0])
+        return float(extract_number(value))
     if value_type == 'NUMERIC':
-        if value.startswith('$'):
-            value = value[1:]
-        return float(value.split(' ')[0])
+        return float(extract_number(value))
     raise Exception('invalid value type')

@@ -35,6 +35,7 @@ class ProcessorsSpider(scrapy.Spider):
     field_labels = {
         '# of Cores': 'cores',
         '# of Threads': 'threads',
+        'Total Threads': 'threads',
         'Processor Number': 'model',
         'Launch Date': 'launch_date',
         'Lithography': 'lithography',

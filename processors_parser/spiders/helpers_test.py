@@ -1,8 +1,23 @@
 import unittest
-from processors_parser.spiders.helpers import parse_value, parse_bytes
+from processors_parser.spiders.helpers import parse_value, \
+    parse_bytes, extract_number, extract_number_with_tail
 
 
 class TestProcessorsSpider(unittest.TestCase):
+    def test_extract_number(self):
+        res = extract_number('up to 10w')
+        self.assertEqual(res, '10')
+
+        res = extract_number('up to $10 - $20')
+        self.assertEqual(res, '10')
+
+    def test_extract_number_with_tail(self):
+        res = extract_number_with_tail('up to 10w')
+        self.assertEqual(res, '10w')
+
+        res = extract_number_with_tail('up to $10 - $20')
+        self.assertEqual(res, '$10 - $20')
+
     def test_parse_bytes(self):
         res = parse_bytes(' 104 B')
         self.assertEqual(res, 104)

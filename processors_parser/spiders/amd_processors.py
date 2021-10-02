@@ -1,11 +1,13 @@
 import scrapy
 import sqlite3
+import re
 from processors_parser.spiders.helpers import parse_value, parse_page
 
 
 class AmdProcessorsSpider(scrapy.Spider):
     name = 'amd_processors'
     allowed_domains = ['amd.com']
+    user_agent = 'Test'
     start_urls = [
         'https://www.amd.com/en/products/specifications/processors'
     ]
@@ -37,7 +39,7 @@ class AmdProcessorsSpider(scrapy.Spider):
         'cache_size': 'NUMERIC',
         'tdp': 'NUMERIC',
         'price': 'NUMERIC',
-        'collection': 'TEXT',
+        'product_line': 'TEXT',
         'socket': 'TEXT',
         'memory_type': 'TEXT',
         'url': 'TEXT',
@@ -64,7 +66,11 @@ class AmdProcessorsSpider(scrapy.Spider):
     def parse(self, response, **kwargs):
         if len(response.body) == 0:
             return
-        processor_links = response.css('#spec-table > tbody > tr')
+
+        processor_links = \
+            list(map(lambda x: '/en/product/' + re.search(r'entity-(\d+)', x.attrib['class'])[1],
+                response.css('#spec-table > tbody > tr > td:nth-child(2)')))
+
         for link in processor_links:
             yield response.follow(link, self.parse_processor)
 
