@@ -11,10 +11,10 @@ class ProcessorsSpider(scrapy.Spider):
     ]
 
     field_labels = {
+        'Processor Number': 'name',
         '# of Cores': 'cores',
         '# of Threads': 'threads',
         'Total Threads': 'threads',
-        'Processor Number': 'model',
         'Launch Date': 'launch_date',
         'Lithography': 'lithography',
         'Processor Base Frequency': 'base_frequency',
@@ -24,11 +24,13 @@ class ProcessorsSpider(scrapy.Spider):
         'TDP': 'tdp',
         'Configurable TDP-up': 'tdp',
         'Recommended Customer Price': 'price',
-        'Product Collection': 'collection',
+        'Product Collection': 'product_line',
         'Sockets Supported': 'socket',
         'Memory Types': 'memory_type',
         'Vertical Segment': 'vertical_segment',
-        'Max Memory Size (dependent on memory type)': 'max_memory_size'
+        'Max Memory Size (dependent on memory type)': 'max_memory_size',
+        'Status': 'status',
+        'Operating Temperature (Maximum)': 'max_temp'
     }
 
     field_types = {

@@ -13,7 +13,7 @@ class AmdProcessorsSpider(scrapy.Spider):
     ]
 
     field_labels = {
-        'view-name-table-column': 'model',
+        'view-name-table-column': 'name',
         'view-field-cpu-core-count-table-column': 'cores',
         'view-field-thread-count-table-column': 'threads',
         'view-field-launch-date-table-column': 'launch_date',
