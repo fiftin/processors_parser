@@ -2,7 +2,7 @@ import re
 
 
 def prepare_brand(value):
-    return value.replace('™', '')
+    return value.replace('™', '').replace('®', '')
 
 
 def parse_page(rows, label_selector, value_selector, field_labels, field_types, url):
@@ -10,8 +10,8 @@ def parse_page(rows, label_selector, value_selector, field_labels, field_types, 
 
     for field_row in rows:
         label = label_selector(field_row)
-        value = value_selector(field_row)
         field_name = field_labels.get(label, None)
+        value = value_selector(field_row, field_name)
 
         if field_name is None:
             continue

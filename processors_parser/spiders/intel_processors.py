@@ -1,6 +1,16 @@
+import re
+
 import scrapy
 import sqlite3
 from processors_parser.spiders.helpers import parse_page
+
+
+def get_field_value(response, row, field_name):
+    value = row.css('.tech-data > *::text').get()
+    if field_name == 'name':
+        m = re.search(r'/product/details/processors/(\w+)/', response.request.url)
+        return value if m is None else m[1] + ' ' + value
+    return value
 
 
 class ProcessorsSpider(scrapy.Spider):
@@ -35,7 +45,7 @@ class ProcessorsSpider(scrapy.Spider):
         '# of Cores': 'cores',
         '# of Threads': 'threads',
         'Total Threads': 'threads',
-        'Processor Number': 'model',
+        'Processor Number': 'name',
         'Launch Date': 'launch_date',
         'Lithography': 'lithography',
         'Processor Base Frequency': 'base_frequency',
@@ -55,7 +65,7 @@ class ProcessorsSpider(scrapy.Spider):
     field_types = {
         'cores': 'INT',
         'threads': 'INT',
-        'model': 'TEXT',
+        'name': 'TEXT',
         'launch_date': 'TEXT',
         'lithography': 'INT',
         'base_frequency': 'NUMERIC',
@@ -69,6 +79,7 @@ class ProcessorsSpider(scrapy.Spider):
         'url': 'TEXT',
         'vertical_segment': 'TEXT',
         'max_memory_size': 'NUMERIC',
+        'max_memory_speed': 'INT'
     }
 
     def __init__(self, **kwargs):
@@ -101,7 +112,7 @@ class ProcessorsSpider(scrapy.Spider):
         fields = parse_page(
             response.css('.tech-section-row'),
             lambda x: x.css('.tech-label > span::text').get(),
-            lambda x: x.css('.tech-data > *::text').get(),
+            lambda x, field_name: get_field_value(response, x, field_name),
             self.field_labels,
             self.field_types,
             response.request.url)
