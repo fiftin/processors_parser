@@ -1,6 +1,21 @@
 import re
 
 
+def format_date(value):
+    quarter_to_month = {
+        '1': '02',
+        '2': '05',
+        '3': '08',
+        '4': '11',
+    }
+
+    m = re.search(r'Q(\d)\'(\d\d)', value)
+
+    if m is not None:
+        century = '19' if m[2][0] == '9' else '20'
+        return century + m[2] + '-' + quarter_to_month[m[1]] + '-01'
+
+
 def prepare_brand(value):
     return value.replace('™', '').replace('®', '')
 
@@ -9,15 +24,18 @@ def parse_page(rows, label_selector, value_selector, field_labels, field_types, 
     fields = {}
 
     for field_row in rows:
-        label = label_selector(field_row)
+        label = label_selector(field_row).strip()
         field_name = field_labels.get(label, None)
-        value = value_selector(field_row, field_name)
 
         if field_name is None:
             continue
 
+        value = value_selector(field_row, field_name)
+
         if value is None:
             continue
+
+        value = value.strip()
 
         try:
             fields[field_name] = parse_value(value, field_types[field_name])
@@ -35,20 +53,34 @@ def parse_page(rows, label_selector, value_selector, field_labels, field_types, 
     return fields
 
 
-def parse_bytes(value):
-    m = re.search(r'([\d.]+)\s*(B|KB|MB|GB|TB)', value)
+def parse_units(value, unit, multiplier=1000):
+    m = re.search(r'([\d.]+)\s*(' + unit + '|K' + unit + '|M' + unit + '|G' + unit + '|T' + unit + ')', value)
     if m is None:
         return None
     rank = 1
-    if m[2] == 'KB':
-        rank = 1000
-    elif m[2] == 'MB':
-        rank = 1000_0000
-    elif m[2] == 'GB':
-        rank = 1000_000_000
-    elif m[2] == 'TB':
-        rank = 1000_000_000_000
+    if m[2] == 'K' + unit:
+        rank = multiplier
+    elif m[2] == 'M' + unit:
+        rank = multiplier * multiplier
+    elif m[2] == 'G' + unit:
+        rank = multiplier * multiplier * multiplier
+    elif m[2] == 'T' + unit:
+        rank = multiplier * multiplier * multiplier * multiplier
     return round(float(m[1]) * rank)
+
+
+def parse_hertz(value):
+    res = parse_units(value, 'Hz')
+    if res is not None:
+        res = res / 1000_000
+    return res
+
+
+def parse_bytes(value):
+    res = parse_units(value, 'B', 1024)
+    if res is not None:
+        res = res / 1024
+    return res
 
 
 def extract_number(value):
@@ -71,12 +103,20 @@ def parse_value(value, value_type):
         return prepare_brand(value)
     if value_type == 'INT':
         num = extract_number_with_tail(value)
-        b = parse_bytes(num)
-        if b is not None:
-            return b
+        num2 = parse_bytes(num)
+        if num2 is not None:
+            return num2
+        num2 = parse_hertz(num)
+        if num2 is not None:
+            return num2
         return int(extract_number(num))
-    if value_type == 'REAL':
-        return float(extract_number(value))
     if value_type == 'NUMERIC':
+        num = extract_number_with_tail(value)
+        num2 = parse_bytes(num)
+        if num2 is not None:
+            return num2
+        num2 = parse_hertz(num)
+        if num2 is not None:
+            return num2
         return float(extract_number(value))
     raise Exception('invalid value type')

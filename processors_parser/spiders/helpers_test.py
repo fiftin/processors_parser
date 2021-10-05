@@ -1,10 +1,17 @@
 import unittest
 from processors_parser.spiders.helpers import parse_value, \
     parse_bytes, extract_number, extract_number_with_tail, \
-    prepare_brand
+    prepare_brand, format_date
 
 
-class TestProcessorsSpider(unittest.TestCase):
+class TestHelpers(unittest.TestCase):
+    def test_format_date(self):
+        res = format_date('Q1\'21')
+        self.assertEqual(res, '2021-02-01')
+
+        res = format_date('Q1\'99')
+        self.assertEqual(res, '1999-02-01')
+
     def test_prepare_brand(self):
         res = prepare_brand('AMD Ryzen™ 9 Mobile Processors with Radeon™ Graphics')
         self.assertEqual(res, 'AMD Ryzen 9 Mobile Processors with Radeon Graphics')
@@ -15,6 +22,9 @@ class TestProcessorsSpider(unittest.TestCase):
 
         res = extract_number('up to $10 - $20')
         self.assertEqual(res, '10')
+
+        res = extract_number('$694.00 - $705.00')
+        self.assertEqual(res, '694.00')
 
     def test_extract_number_with_tail(self):
         res = extract_number_with_tail('up to 10w')
@@ -38,6 +48,9 @@ class TestProcessorsSpider(unittest.TestCase):
     def test_parse_value_numeric_dollar(self):
         res = parse_value('$10 - $100 ', 'NUMERIC')
         self.assertEqual(res, 10)
+
+        res = parse_value('$694.00 - $705.00', 'NUMERIC')
+        self.assertEqual(res, 694)
 
 
 if __name__ == '__main__':

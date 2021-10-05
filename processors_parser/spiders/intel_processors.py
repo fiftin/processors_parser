@@ -5,14 +5,6 @@ import sqlite3
 from processors_parser.spiders.helpers import parse_page
 
 
-def get_field_value(response, row, field_name):
-    value = row.css('.tech-data > *::text').get()
-    if field_name == 'name':
-        m = re.search(r'/product/details/processors/(\w+)/', response.request.url)
-        return value if m is None else m[1] + ' ' + value
-    return value
-
-
 class ProcessorsSpider(scrapy.Spider):
     name = 'intel_processors'
     allowed_domains = ['intel.com']
@@ -61,7 +53,8 @@ class ProcessorsSpider(scrapy.Spider):
         'Vertical Segment': 'vertical_segment',
         'Max Memory Size (dependent on memory type)': 'max_memory_size',
         'Status': 'status',
-        'Operating Temperature (Maximum)': 'max_temp'
+        'Operating Temperature (Maximum)': 'max_temp',
+        'T': 'max_temp',
     }
 
     field_types = {
@@ -110,17 +103,41 @@ class ProcessorsSpider(scrapy.Spider):
         for link in processor_links:
             yield response.follow(link, self.parse_processor)
 
+    @staticmethod
+    def get_processor_family(response):
+        fullname = response.css('h1::text').get()
+        m = re.search(r'Intel®?\s+(\w+)®?\s+', fullname)
+
+        if m is None:
+            return None
+
+        return m[1]
+
+    @staticmethod
+    def get_field_value(response, row, field_name):
+        value = row.css('.tech-data > *::text').get()
+        if field_name == 'name':
+            if value is None:
+                return None
+            family = ProcessorsSpider.get_processor_family(response)
+            if family is not None:
+                value = family + ' ' + value
+        return value
+
     def parse_processor(self, response):
         fields = parse_page(
             response.css('.tech-section-row'),
             lambda x: x.css('.tech-label > span::text').get(),
-            lambda x, field_name: get_field_value(response, x, field_name),
+            lambda x, field_name: self.get_field_value(response, x, field_name),
             self.field_labels,
             self.field_types,
             response.request.url)
 
-        if fields is None:
+        if fields['name'] is None:
             return
+
+        # if fields is None:
+        #    return
 
         c = self.conn.cursor()
         query = 'INSERT INTO intel_processors(' + \
