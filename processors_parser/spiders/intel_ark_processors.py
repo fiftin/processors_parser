@@ -1,44 +1,13 @@
-import re
-
 import scrapy
 import sqlite3
 from processors_parser.spiders.helpers import parse_page
 
 
-def get_field_value(response, row, field_name):
-    value = row.css('.tech-data > *::text').get()
-    if field_name == 'name':
-        m = re.search(r'/product/details/processors/(\w+)/', response.request.url)
-        return value if m is None else m[1] + ' ' + value
-    return value
-
-
 class ProcessorsSpider(scrapy.Spider):
-    name = 'intel_processors'
-    allowed_domains = ['intel.com']
+    name = 'intel_ark_processors'
+    allowed_domains = ['ark.intel.com']
     start_urls = [
-        'https://www.intel.com/content/www/us/en/products/details/processors/core/i3/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/core/i5/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/core/i7/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/core/i9/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/core/x/products.html',
-
-        'https://www.intel.com/content/www/us/en/products/details/processors/celeron/products.html',
-
-        'https://www.intel.com/content/www/us/en/products/details/processors/pentium/gold/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/pentium/silver/products.html',
-
-        'https://www.intel.com/content/www/us/en/products/details/processors/atom/c/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/atom/p/products.html',
-
-        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/scalable/platinum/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/scalable/gold/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/scalable/silver/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/scalable/bronze/products.html',
-
-        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/e/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/w/products.html',
-        'https://www.intel.com/content/www/us/en/products/details/processors/xeon/d/products.html',
+        'https://ark.intel.com/content/www/us/en/ark.html'
     ]
 
     field_labels = {
@@ -67,7 +36,7 @@ class ProcessorsSpider(scrapy.Spider):
     field_types = {
         'cores': 'INT',
         'threads': 'INT',
-        'name': 'TEXT',
+        'model': 'TEXT',
         'launch_date': 'TEXT',
         'lithography': 'INT',
         'base_frequency': 'NUMERIC',
@@ -81,7 +50,6 @@ class ProcessorsSpider(scrapy.Spider):
         'url': 'TEXT',
         'vertical_segment': 'TEXT',
         'max_memory_size': 'NUMERIC',
-        'max_memory_speed': 'INT'
     }
 
     def __init__(self, **kwargs):
@@ -94,9 +62,9 @@ class ProcessorsSpider(scrapy.Spider):
         for field_name, field_type in self.field_types.items():
             table_columns += ', ' + field_name + ' ' + field_type
 
-        c.execute('DROP TABLE IF EXISTS intel_processors')
+        c.execute('DROP TABLE IF EXISTS intel_ark_processors')
 
-        c.execute("CREATE TABLE intel_processors("
+        c.execute("CREATE TABLE intel_ark_processors("
                   "id INTEGER PRIMARY KEY" +
                   table_columns + ')')
 
@@ -106,15 +74,22 @@ class ProcessorsSpider(scrapy.Spider):
         if len(response.body) == 0:
             return
 
-        processor_links = response.css('.table-responsive tbody > tr > td:nth-child(2) > a')
+        processor_links = response.css('a.ark-accessible-color')
+        for link in processor_links:
+            yield response.follow(link, self.parse_processors)
+
+
+    def parse_processors(self, response):
+        processor_links = response.css('#product-table tbody > tr > td:nth-child(1) > a')
         for link in processor_links:
             yield response.follow(link, self.parse_processor)
+
 
     def parse_processor(self, response):
         fields = parse_page(
             response.css('.tech-section-row'),
             lambda x: x.css('.tech-label > span::text').get(),
-            lambda x, field_name: get_field_value(response, x, field_name),
+            lambda x: x.css('.tech-data > *::text').get(),
             self.field_labels,
             self.field_types,
             response.request.url)
@@ -123,7 +98,7 @@ class ProcessorsSpider(scrapy.Spider):
             return
 
         c = self.conn.cursor()
-        query = 'INSERT INTO intel_processors(' + \
+        query = 'INSERT INTO intel_ark_processors(' + \
                 ', '.join(fields.keys()) + \
                 ') VALUES (' + \
                 ', '.join(['?' for _ in range(len(fields))]) + \
