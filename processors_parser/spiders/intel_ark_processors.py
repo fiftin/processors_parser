@@ -104,21 +104,25 @@ class IntelArkProcessorsSpider(scrapy.Spider):
         return None if m is None else m[1]
 
     @staticmethod
-    def get_processor_name(fullname):
+    def get_processor_name(fullname, process_number=None):
         if fullname.find('Processor') == -1 and fullname.find('Microcontroller') == -1:
             return None
 
-        name = prepare_brand(fullname)\
-            .strip() \
+        name = prepare_brand(fullname) \
             .replace('Processor', '') \
             .replace('Microcontroller', '') \
             .replace('  ', ' ')
 
         m = re.search('$([^(]+)', name)
         if m is not None:
-            name = m[1].strip()
+            name = m[1]
 
-        return name
+        if process_number is not None:
+            i = name.find(process_number)
+            if i != -1:
+                name = name[0:i + len(process_number)]
+
+        return name.strip()
 
     @staticmethod
     def get_processor_family(response):
@@ -146,7 +150,8 @@ class IntelArkProcessorsSpider(scrapy.Spider):
         if fields is None:
             return
 
-        fields['name'] = self.get_processor_name(response.css('h1::text').get())
+        fields['name'] = self.get_processor_name(response.css('h1::text').get(), fields.get('processor_number', None))
+        fields['fullname'] = prepare_brand(response.css('h1::text').get()).strip()
 
         if fields.get('name', None) is None and fields.get('processor_number', None) is None:
             return
