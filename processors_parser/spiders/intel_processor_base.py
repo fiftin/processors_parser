@@ -31,6 +31,7 @@ class IntelProcessorsBaseSpider(scrapy.Spider):
         'Operating Temperature (Maximum)': 'max_temp',
         'TJUNCTION': 'max_temp',
         'TCASE': 'max_temp',
+        'T': 'max_temp',
         'Package Size': 'package_size',
     }
 
@@ -91,11 +92,16 @@ class IntelProcessorsBaseSpider(scrapy.Spider):
         if len(response.body) == 0:
             return
 
-        processor_links = response.css(self.processor_collection_link_selector)
-        for link in processor_links:
-            yield response.follow(link, self.parse_processors)
+        if self.processor_collection_link_selector is None:
+            processor_links = response.css(self.processor_link_selector)
+            for link in processor_links:
+                yield response.follow(link, self.parse_processor)
+        else:
+            processor_links = response.css(self.processor_collection_link_selector)
+            for link in processor_links:
+                yield response.follow(link, self.parse_processor_collection)
 
-    def parse_processors(self, response):
+    def parse_processor_collection(self, response):
         processor_links = response.css(self.processor_link_selector)
         for link in processor_links:
             yield response.follow(link, self.parse_processor)

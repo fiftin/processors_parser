@@ -1,8 +1,3 @@
-import re
-
-import scrapy
-import sqlite3
-from processors_parser.spiders.helpers import parse_page, prepare_brand, format_date
 from processors_parser.spiders.intel_processor_base import IntelProcessorsBaseSpider
 
 
@@ -14,7 +9,7 @@ class IntelArkProcessorsSpider(IntelProcessorsBaseSpider):
     ]
 
     processor_collection_link_selector = '.products.processors a.ark-accessible-color'
-    processor_link_selector = '#product-table tbody > tr > td:nth-child(1) > a'
+    processors_link_selector = '#product-table tbody > tr > td:nth-child(1) > a'
     url_sku_re = r'/products/(\d+)/'
     processor_prop_selector = '.arkProductSpecifications li'
     processor_prop_label_selector = '.label *::text'
