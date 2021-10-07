@@ -35,7 +35,7 @@ class AmdProcessorsSpider(scrapy.Spider):
     field_types = {
         'cores': 'INT',
         'threads': 'INT',
-        'model': 'TEXT',
+        'name': 'TEXT',
         'launch_date': 'TEXT',
         'lithography': 'INT',
         'base_frequency': 'NUMERIC',
@@ -51,6 +51,7 @@ class AmdProcessorsSpider(scrapy.Spider):
         'vertical_segment': 'TEXT',
         'max_temp': 'NUMERIC',
         'max_memory_speed': 'INT',
+        'sku': 'INT',
     }
 
     def __init__(self, **kwargs):
@@ -81,13 +82,20 @@ class AmdProcessorsSpider(scrapy.Spider):
             self.parse_processor(row)
 
     def parse_processor(self, row):
+        sku = re.search(r'entity-(\d+)', row.css('td:nth-child(2)').attrib['class'])[1]
+
         fields = parse_page(
             row.css('td'),
             lambda x: x.attrib.get('headers', None),
-            lambda x: x.css('::text').get(),
+            lambda x, _: x.css('::text').get(),
             self.field_labels,
             self.field_types,
-            'https://www.amd.com/en/product/' + re.search(r'entity-(\d+)', row.css('td:nth-child(2)').attrib['class'])[1])
+            'https://www.amd.com/en/product/' + sku)
+
+        if fields is None:
+            return
+
+        fields['sku'] = sku
 
         c = self.conn.cursor()
         query = 'INSERT INTO amd_processors(' + \

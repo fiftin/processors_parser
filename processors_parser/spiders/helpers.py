@@ -24,7 +24,9 @@ def parse_page(rows, label_selector, value_selector, field_labels, field_types, 
     fields = {}
 
     for field_row in rows:
-        label = label_selector(field_row).strip()
+        label = label_selector(field_row)
+        if label is not None:
+            label = label.strip()
         field_name = field_labels.get(label, None)
 
         if field_name is None:
