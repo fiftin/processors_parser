@@ -1,7 +1,7 @@
 import scrapy
 import sqlite3
 import re
-from processors_parser.spiders.helpers import parse_page
+from processors_parser.spiders.helpers import parse_page, format_date
 
 
 class AmdProcessorsSpider(scrapy.Spider):
@@ -81,13 +81,20 @@ class AmdProcessorsSpider(scrapy.Spider):
         for row in processor_rows:
             self.parse_processor(row)
 
+    @staticmethod
+    def get_field_value(value, field_name):
+        if field_name == 'launch_date':
+            return format_date(value)
+        else:
+            return value
+
     def parse_processor(self, row):
         sku = re.search(r'entity-(\d+)', row.css('td:nth-child(2)').attrib['class'])[1]
 
         fields = parse_page(
             row.css('td'),
             lambda x: x.attrib.get('headers', None),
-            lambda x, _: x.css('::text').get(),
+            lambda x, field_name: self.get_field_value(x.css('::text').get(), field_name),
             self.field_labels,
             self.field_types,
             'https://www.amd.com/en/product/' + sku)

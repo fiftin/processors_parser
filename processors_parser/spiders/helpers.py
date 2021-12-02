@@ -2,6 +2,9 @@ import re
 
 
 def format_date(value):
+    if value is None:
+        return None
+
     quarter_to_month = {
         '1': '02',
         '2': '05',
@@ -14,6 +17,16 @@ def format_date(value):
     if m is not None:
         century = '19' if m[2][0] == '9' else '20'
         return century + m[2] + '-' + quarter_to_month[m[1]] + '-01'
+
+    m = re.search(r'(\d?\d)/(\d?\d)/(\d\d\d\d)', value)
+
+    if m is not None:
+        return m[3] + '-' + m[1].zfill(2) + '-' + m[2].zfill(2)
+
+    m = re.search(r'(\d?\d)/(\d\d\d\d)', value)
+
+    if m is not None:
+        return m[2] + '-' + m[1].zfill(2) + '-15'
 
 
 def prepare_brand(value):

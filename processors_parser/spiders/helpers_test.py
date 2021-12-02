@@ -6,11 +6,18 @@ from processors_parser.spiders.helpers import parse_value, \
 
 class TestHelpers(unittest.TestCase):
     def test_format_date(self):
+        res = format_date('10/2021')
+        self.assertEqual(res, '2021-10-15')
+
+        res = format_date('10/27/2021')
+        self.assertEqual(res, '2021-10-27')
+
         res = format_date('Q1\'21')
         self.assertEqual(res, '2021-02-01')
 
         res = format_date('Q1\'99')
         self.assertEqual(res, '1999-02-01')
+
 
     def test_prepare_brand(self):
         res = prepare_brand('AMD Ryzen™ 9 Mobile Processors with Radeon™ Graphics')
