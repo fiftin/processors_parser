@@ -1,6 +1,5 @@
 import scrapy
 import sqlite3
-import re
 from processors_parser.spiders.helpers import parse_page
 
 
@@ -21,9 +20,52 @@ class AmdArchiveProcessorsSpider(scrapy.Spider):
     ]
 
     field_labels = {
+        'ctl00_cphBody_lblModel': 'name',
+        'ctl00_cphBody_lblProductFamily': 'Processor',
+        'ctl00_cphBody_lblOPNTray': 'opn_tray',
+        'ctl00_cphBody_lblOPNPIB': 'opn_pib',
+        'ctl00_cphBody_lblRevision': 'revision',
+        'ctl00_cphBody_lblCoreSpeed': 'base_frequency',
+        'ctl00_cphBody_lblMaxTemps': 'max_temp',
+        'ctl00_cphBody_lblWattage': 'tdp',
+        'ctl00_cphBody_lblL1CacheSize': 'cache_l1',
+        'ctl00_cphBody_lblL2CacheSize': 'cache_l2',
+        'ctl00_cphBody_lblL3CacheSize': 'cache_l3',
+        'ctl00_cphBody_lblCMOS': 'lithography',
+        'ctl00_cphBody_lblSocket': 'socket',
     }
 
+    # field_labels = {
+    #     'Model': 'name',
+    #     'product_line': 'Processor',
+    #     'OPN Tray': 'opn_tray',
+    #     'OPN PIB': 'opn_pib',
+    #     'Revision': 'revision',
+    #     'Core Speed (Mhz)': 'base_frequency',
+    #     'Max Temps (C)': 'max_temp',
+    #     'Wattage': 'tdp',
+    #     'L1 Cache Size (KB)': 'cache_l1',
+    #     'L2 Cache Size (KB)': 'cache_l2',
+    #     'L3 Cache Size (KB)': 'cache_l3',
+    #     'CMOS': 'lithography',
+    #     'Socket': 'socket',
+    # }
+
     field_types = {
+        'name': 'TEXT',
+        'base_frequency': 'NUMERIC',
+        'tdp': 'NUMERIC',
+        'max_temp': 'NUMERIC',
+        'url': 'TEXT',
+        'socket': 'TEXT',
+        'product_line': 'TEXT',
+        'lithography': 'INT',
+        'opn_tray': 'TEXT',
+        'opn_pib': 'TEXT',
+        'revision': 'TEXT',
+        'cache_l1': 'NUMERIC',
+        'cache_l2': 'NUMERIC',
+        'cache_l3': 'NUMERIC',
     }
 
     def __init__(self, **kwargs):
@@ -48,26 +90,19 @@ class AmdArchiveProcessorsSpider(scrapy.Spider):
         if len(response.body) == 0:
             return
 
-        processor_rows = response.css('#spec-table > tbody > tr')
+        processor_links = response.css('.compareResultTable tr a')
 
-        for row in processor_rows:
-            self.parse_processor(row)
+        for link in processor_links:
+            yield response.follow(link, self.parse_processor)
 
-    def parse_processor(self, row):
-        sku = re.search(r'entity-(\d+)', row.css('td:nth-child(2)').attrib['class'])[1]
-
+    def parse_processor(self, response):
         fields = parse_page(
-            row.css('td'),
-            lambda x: x.attrib.get('headers', None),
+            response.css('.mainContainer table table table table tr td:nth-child(2) span'),
+            lambda x: x.attrib.get('id', None),
             lambda x, _: x.css('::text').get(),
             self.field_labels,
             self.field_types,
-            'https://www.amd.com/en/product/' + sku)
-
-        if fields is None:
-            return
-
-        fields['sku'] = sku
+            response.request.url)
 
         c = self.conn.cursor()
         query = 'INSERT INTO amd_archive_processors(' + \
