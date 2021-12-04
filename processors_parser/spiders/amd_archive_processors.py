@@ -120,8 +120,10 @@ class AmdArchiveProcessorsSpider(scrapy.Spider):
             yield response.follow(link, self.parse_processor)
 
     def parse_processor(self, response):
+        rows = list(map(lambda x: response.css('#' + x), self.field_labels.keys()))
+
         fields = parse_page(
-            response.css('.mainContainer table table table table tr td:nth-child(2) span'),
+            rows,
             lambda x: x.attrib.get('id', None),
             lambda x, _: x.css('::text').get(),
             self.field_labels,
