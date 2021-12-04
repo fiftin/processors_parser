@@ -7,21 +7,10 @@ class AmdArchiveProcessorsSpider(scrapy.Spider):
     name = 'amd_archive_processors'
     allowed_domains = ['web.archive.org']
     user_agent = 'Test'
-    start_urls = [
-        'https://web.archive.org/web/20071201082516/http://products.amd.com/en-us/DesktopCPUResult.aspx',
-        'https://web.archive.org/web/20081204062327/http://products.amd.com/en-us/DesktopCPUResult.aspx',
-        'https://web.archive.org/web/20091031060354/http://products.amd.com/en-US/DesktopCPUResult.aspx',
-        'https://web.archive.org/web/20100604022602/http://products.amd.com/en-us/DesktopCPUResult.aspx',
-        'https://web.archive.org/web/20110902072938/http://products.amd.com/en-us/DesktopCPUResult.aspx',
-        'https://web.archive.org/web/20121101192858/http://products.amd.com/en-us/desktopcpuresult.aspx',
-        'https://web.archive.org/web/20131202021519/http://products.amd.com/pages/DesktopCPUResult.aspx',
-        'https://web.archive.org/web/20141028101157/http://products.amd.com/en-us/DesktopCPUResult.aspx',
-        'https://web.archive.org/web/20150711210326/http://products.amd.com/en-us/DesktopCPUResult.aspx',
-    ]
 
     field_labels = {
         'ctl00_cphBody_lblModel': 'name',
-        'ctl00_cphBody_lblProductFamily': 'Processor',
+        'ctl00_cphBody_lblProductFamily': 'product_line',
         'ctl00_cphBody_lblOPNTray': 'opn_tray',
         'ctl00_cphBody_lblOPNPIB': 'opn_pib',
         'ctl00_cphBody_lblRevision': 'revision',
@@ -66,7 +55,12 @@ class AmdArchiveProcessorsSpider(scrapy.Spider):
         'cache_l1': 'NUMERIC',
         'cache_l2': 'NUMERIC',
         'cache_l3': 'NUMERIC',
+        'first_mention_year': 'TEXT',
     }
+
+    unique_fields = [
+        ('opn_tray', 'opn_pib'),
+    ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -76,21 +70,51 @@ class AmdArchiveProcessorsSpider(scrapy.Spider):
 
         table_columns = ''
         for field_name, field_type in self.field_types.items():
-            table_columns += ', ' + field_name + ' ' + field_type
+            table_columns += ', ' + field_name + ' ' + field_type + \
+                             (' unique' if field_name in self.unique_fields else '')
+
+        constraints = ', '.join(
+                map(lambda x: 'unique(' + ', '.join(x) + ')',
+                    filter(lambda x: isinstance(x, tuple), self.unique_fields)))
+
+        if constraints != '':
+            constraints = ', ' + constraints
 
         c.execute('DROP TABLE IF EXISTS amd_archive_processors')
 
-        c.execute("CREATE TABLE amd_archive_processors("
-                  "id INTEGER PRIMARY KEY" +
-                  table_columns + ')')
+        q = ("CREATE TABLE amd_archive_processors("
+             "id INTEGER PRIMARY KEY" +
+             table_columns +
+             constraints +
+             ')')
+
+        c.execute(q)
 
         self.conn = conn
 
-    def parse(self, response, **kwargs):
+    def start_requests(self):
+        urls = [
+            'https://web.archive.org/web/20071201082516/http://products.amd.com/en-us/DesktopCPUResult.aspx',
+            'https://web.archive.org/web/20081204062327/http://products.amd.com/en-us/DesktopCPUResult.aspx',
+            'https://web.archive.org/web/20091031060354/http://products.amd.com/en-US/DesktopCPUResult.aspx',
+            'https://web.archive.org/web/20100604022602/http://products.amd.com/en-us/DesktopCPUResult.aspx',
+            # 'https://web.archive.org/web/20110902072938/http://products.amd.com/en-us/DesktopCPUResult.aspx',
+            # 'https://web.archive.org/web/20121101192858/http://products.amd.com/en-us/desktopcpuresult.aspx',
+            # 'https://web.archive.org/web/20131202021519/http://products.amd.com/pages/DesktopCPUResult.aspx',
+            # 'https://web.archive.org/web/20141028101157/http://products.amd.com/en-us/DesktopCPUResult.aspx',
+            # 'https://web.archive.org/web/20150711210326/http://products.amd.com/en-us/DesktopCPUResult.aspx',
+        ]
+
+        order = len(urls)
+        for url in urls:
+            yield scrapy.Request(url=url, callback=self.parse_list, priority=order)
+            order -= 1
+
+    def parse_list(self, response, **kwargs):
         if len(response.body) == 0:
             return
 
-        processor_links = response.css('.compareResultTable tr a')
+        processor_links = response.css('.compareResultTable tr td a')
 
         for link in processor_links:
             yield response.follow(link, self.parse_processor)
@@ -103,6 +127,18 @@ class AmdArchiveProcessorsSpider(scrapy.Spider):
             self.field_labels,
             self.field_types,
             response.request.url)
+
+        if fields is None:
+            return
+
+        if response.request.url is not None and len(response.request.url) > 32:
+            fields['first_mention_year'] = response.request.url[28:32]
+
+        if fields['opn_tray'].lower() == 'n/a' or fields['opn_tray'] == '':
+            del fields['opn_tray']
+
+        if fields['opn_pib'].lower() == 'n/a' or fields['opn_pib'] == '':
+            del fields['opn_pib']
 
         c = self.conn.cursor()
         query = 'INSERT INTO amd_archive_processors(' + \

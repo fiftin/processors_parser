@@ -69,6 +69,9 @@ def parse_page(rows, label_selector, value_selector, field_labels, field_types, 
 
 
 def parse_units(value, unit, multiplier=1000):
+    if value is None or value == '':
+        return None
+
     m = re.search(r'([\d.]+)\s*(' + unit + '|K' + unit + '|M' + unit + '|G' + unit + '|T' + unit + ')', value)
     if m is None:
         return None
@@ -124,7 +127,10 @@ def parse_value(value, value_type):
         num2 = parse_hertz(num)
         if num2 is not None:
             return num2
-        return int(extract_number(num))
+        num3 = extract_number(num)
+        if num3 is None:
+            return None
+        return int(num3)
     if value_type == 'NUMERIC':
         num = extract_number_with_tail(value)
         num2 = parse_bytes(num)
@@ -133,5 +139,8 @@ def parse_value(value, value_type):
         num2 = parse_hertz(num)
         if num2 is not None:
             return num2
-        return float(extract_number(value))
+        num3 = extract_number(value)
+        if num3 is None:
+            return None
+        return float(num3)
     raise Exception('invalid value type')
