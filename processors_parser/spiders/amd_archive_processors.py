@@ -98,11 +98,11 @@ class AmdArchiveProcessorsSpider(scrapy.Spider):
             'https://web.archive.org/web/20081204062327/http://products.amd.com/en-us/DesktopCPUResult.aspx',
             'https://web.archive.org/web/20091031060354/http://products.amd.com/en-US/DesktopCPUResult.aspx',
             'https://web.archive.org/web/20100604022602/http://products.amd.com/en-us/DesktopCPUResult.aspx',
-            # 'https://web.archive.org/web/20110902072938/http://products.amd.com/en-us/DesktopCPUResult.aspx',
-            # 'https://web.archive.org/web/20121101192858/http://products.amd.com/en-us/desktopcpuresult.aspx',
-            # 'https://web.archive.org/web/20131202021519/http://products.amd.com/pages/DesktopCPUResult.aspx',
-            # 'https://web.archive.org/web/20141028101157/http://products.amd.com/en-us/DesktopCPUResult.aspx',
-            # 'https://web.archive.org/web/20150711210326/http://products.amd.com/en-us/DesktopCPUResult.aspx',
+            'https://web.archive.org/web/20110902072938/http://products.amd.com/en-us/DesktopCPUResult.aspx',
+            'https://web.archive.org/web/20121101192858/http://products.amd.com/en-us/desktopcpuresult.aspx',
+            'https://web.archive.org/web/20131202021519/http://products.amd.com/pages/DesktopCPUResult.aspx',
+            'https://web.archive.org/web/20141028101157/http://products.amd.com/en-us/DesktopCPUResult.aspx',
+            'https://web.archive.org/web/20150711210326/http://products.amd.com/en-us/DesktopCPUResult.aspx',
         ]
 
         order = len(urls)
@@ -139,6 +139,8 @@ class AmdArchiveProcessorsSpider(scrapy.Spider):
 
         if fields['opn_pib'].lower() == 'n/a' or fields['opn_pib'] == '':
             del fields['opn_pib']
+
+        fields['name'] = fields['product_line'] + ' ' + fields['name']
 
         c = self.conn.cursor()
         query = 'INSERT INTO amd_archive_processors(' + \
